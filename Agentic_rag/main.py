@@ -6,29 +6,33 @@ import os, uvicorn
 from dotenv import load_dotenv, find_dotenv
 from typing import Union
 
-from fastapi import FastAPI, HTTPException
+
+from flask import Flask, request, jsonify, render_template
+# from fastapi import FastAPI, HTTPException
 
 # Load environment variables
 _ = load_dotenv(find_dotenv())
 
-app = FastAPI()
+# app = FastAPI()
+app = Flask(__name__)
+
 
 # Create a RAG tool using LlamaIndex
 documents = SimpleDirectoryReader("data").load_data()
 index = VectorStoreIndex.from_documents(documents)
 query_engine = index.as_query_engine()
 
-@app.post("/query")
-async def query_llama_index(query: str): #-> Union[str, dict]:
-    """
-    Endpoint to query the LlamaIndex vector store.
-    """
-    try:
-        response = query_engine.query(query)
-        return {"response": str(response)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
+@app.route("/", methods=["POST", 'GET'])
+def index():
+    if request.method == "POST":
+        query = request.form.get("query")
+        response = query_engine.query(query)    
+        return render_template('index.html', query=query, response=response)
+    return render_template('index.html')
+
+if __name__ =="__main__":
+    port = int(os.environ.get('port', 3000))
+    app.run(host='0.0.0.0', port=port, debug=True)
 
 
-if __name__ == "__main__":    
-    uvicorn.run(app, host="0.0.0.0", port=8000) #reload=True)
