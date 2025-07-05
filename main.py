@@ -18,18 +18,30 @@ app = Flask(__name__)
 
 
 # Create a RAG tool using LlamaIndex
-documents = SimpleDirectoryReader("data").load_data()
+documents = SimpleDirectoryReader("./data").load_data()
 index = VectorStoreIndex.from_documents(documents)
 query_engine = index.as_query_engine()
 
 
-@app.route("/", methods=["POST", 'GET'])
-def index():
-    if request.method == "POST":
-        query = request.form.get("query")
-        response = query_engine.query(query)    
-        return render_template('index.html', query=query, response=response)
+
+
+
+# Landing page route (GET only)
+@app.route("/", methods=["GET"])
+def landing():
     return render_template('index.html')
+
+# Chat page route (GET for chat UI, POST for chat API)
+@app.route("/chat", methods=["POST", "GET"])
+def chat():
+    if request.method == "POST":
+        # Accept both form and JSON for flexibility
+        query = request.form.get("query") 
+        if not query:
+            return "No query provided", 400
+        response = query_engine.query(query)
+        return str(response)
+    return render_template('component.html')
 
 if __name__ =="__main__":
     port = int(os.environ.get('port', 3000))

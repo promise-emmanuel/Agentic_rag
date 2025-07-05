@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="https://www.creative-tim.com/twcomponents/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://www.creative-tim.com/twcomponents/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://www.creative-tim.com/twcomponents/favicon-16x16.png">
+    <link rel="manifest" href="https://www.creative-tim.com/twcomponents/site.webmanifest">
+    <link rel="mask-icon" href="https://www.creative-tim.com/twcomponents/safari-pinned-tab.svg" color="#0ed3cf">
+    <meta name="msapplication-TileColor" content="#0ed3cf">
+    <meta name="theme-color" content="#0ed3cf">
+
+    <meta property="og:image" content="https://tailwindcomponents.com/storage/9797/conversions/temp37845-ogimage.jpg?v=2025-06-27 17:20:12" />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="640" />
+    <meta property="og:image:type" content="image/png" />
+
+    <meta property="og:url" content="https://www.creative-tim.com/twcomponents/component/chatbot/landing" />
+    <meta property="og:title" content="AskPromise" />
+    <meta property="og:description" content="Built with AlpineJS" />
+
+    <!-- <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@TwComponents" />
+    <meta name="twitter:title" content="Chatbot by Scott Windon" />
+    <meta name="twitter:description" content="Built with AlpineJS" />
+    <meta name="twitter:image" content="https://tailwindcomponents.com/storage/9797/conversions/temp37845-ogimage.jpg?v=2025-06-27 17:20:12" /> -->
+
+    <!-- <link rel="canonical" href="https://www.creative-tim.com/twcomponents/component/chatbot" itemprop="URL"> -->
+    
+    <title>RAG Chatbot</title>
+
+            <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+
+<body class="bg-[#fdf6ee] min-h-screen text-black">
+    <div class="flex flex-col h-screen" x-data="chatBot()" x-init="init()" style="background: #fdf6ee; color: #111;">
+        <!-- Header -->
+        <header class="bg-[#d2b48c] text-black py-4 px-8 flex items-center shadow-md">
+            <img src="../static/Image.jpg" alt="AskPromise Logo" class="w-10 h-10 rounded-full mr-3" />
+            <h1 class="text-2xl font-bold tracking-wide text-[#a67c52]">AskPromise</h1>
+        </header>
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Sidebar: Chat History -->
+            <aside class="w-64 bg-[#f7e7ce] border-r border-[#e2c9a0] flex flex-col p-4 overflow-y-auto hidden md:flex custom-scrollbar" style="max-height: 100vh; min-height: 0; scrollbar-width: thin; scrollbar-color: #a67c52 #f7e7ce;">
+                <h2 class="text-lg font-semibold mb-4 text-[#a67c52]">Chat History</h2>
+                <template x-for="(session, idx) in chatHistory" :key="idx">
+                    <div class="mb-2 relative group">
+                        <button class="w-full text-left px-3 py-2 rounded hover:bg-[#f3d9b2] focus:outline-none focus:bg-[#f3d9b2] text-black truncate"
+                            :class="currentSession === idx ? 'bg-[#e2c9a0] font-bold' : ''"
+                            @click="switchSession(idx)">
+                            <span x-text="session.title"></span>
+                        </button>
+                        <!-- More options button -->
+                        <button class="absolute right-2 top-2 opacity-60 group-hover:opacity-100 transition" @click.stop="session.showMenu = !session.showMenu">
+                            <span class="text-xl">&#8230;</span>
+                        </button>
+                        <div x-show="session.showMenu" @click.away="session.showMenu = false" class="absolute right-0 mt-2 w-32 bg-white border border-[#e2c9a0] rounded shadow-lg z-10">
+                            <button class="block w-full text-left px-4 py-2 text-sm hover:bg-[#f3d9b2] text-black" @click="renameSession(idx); session.showMenu = false">Rename</button>
+                            <button class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-[#f3d9b2]" @click="deleteSession(idx); session.showMenu = false">Delete</button>
+                        </div>
+                    </div>
+                </template>
+                <button class="mt-4 px-4 py-2 bg-[#a67c52] text-white rounded hover:bg-[#7c5a36] transition" @click="newSession()">+ New Chat</button>
+            </aside>
+<style>
+/* Custom scrollbar for chat area and sidebar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2c9a0;
+  border-radius: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f7e7ce;
+  border-radius: 8px;
+}
+/* For Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #e2c9a0 #f7e7ce;
+}
+</style>
+            <!-- Main Chat Area -->
+            <main class="flex-1 flex flex-col h-full" style="background: #fff; color: #111;">
+                <div class="flex-1 flex flex-col overflow-y-auto p-6 custom-scrollbar" id="messages">
+                    <template x-for="(message, key) in messages" :key="key">
+                        <div class="mb-4 flex" :class="message.from=='bot'?'':'justify-end'">
+                            <div class="flex flex-col items-start w-full max-w-xl" :class="message.from=='user' ? 'items-end ml-auto' : ''">
+                                <div class="flex items-end">
+                                    <!-- IMAGE-AVATAR-PLACEHOLDER: To use your own image for bot responses, replace the src URL below. -->
+                                    <template x-if="message.from=='bot'">
+                                        <!-- Dummy bot image. Replace /static/dummy-bot.png with your own image path. -->
+                                        <img src="../static/Image.jpg" alt="Bot Avatar" class="w-8 h-8 rounded-full mr-3 order-1" />
+                                    </template>
+                                    <template x-if="message.from=='user'">
+                                        <!-- Optionally, add a user avatar here. Example: -->
+                                        <!-- <img src="/static/dummy-user.png" alt="User Avatar" class="w-8 h-8 rounded-full ml-3 order-2" /> -->
+                                    </template>
+                                    <div class="max-w-xl px-5 py-3 rounded-2xl shadow text-md" :class="message.from=='bot'?'bg-[#f7e7ce] text-black rounded-bl-none':'bg-[#a67c52] text-white rounded-br-none'" x-html="message.text"></div>
+                                </div>
+                                <template x-if="message.from=='bot'">
+                                    <button class="flex items-center mt-1 ml-11 text-xs text-[#a67c52] hover:text-[#7c5a36] focus:outline-none" @click="copyToClipboard(message.text)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8a2 2 0 002-2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v6a2 2 0 002 2zm0 0v2a2 2 0 002 2h4a2 2 0 002-2v-2" /></svg>
+                                        Copy
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                    <div x-show="botTyping" class="mb-4 flex items-center">
+                        <img src="https://support.signal.org/hc/article_attachments/360016877511/typing-animation-3x.gif" alt="..." class="w-12 h-6 mr-3">
+                        <span class="text-[#a67c52]">AskPromise is typing...</span>
+                    </div>
+                </div>
+                <form class="flex items-center border-t border-[#e2c9a0] p-4" method="POST" action="/" @submit.prevent="updateChat($refs.input)">
+                    <input id="query" type="text" placeholder="Type your question..." autocomplete="off" autofocus="true" class="flex-1 text-md focus:outline-none text-black placeholder-[#a67c52] bg-[#f7e7ce] border border-[#e2c9a0] rounded-full px-5 py-3 mr-4" x-ref="input" />
+                    <button type="submit" class="inline-flex items-center justify-center rounded-full h-12 w-12 text-white bg-[#a67c52] hover:bg-[#7c5a36] transition focus:outline-none">
+                        <i class="mdi mdi-arrow-right text-2xl leading-none"></i>
+                    </button>
+                </form>
+            </main>
+        </div>
+    </div>
+
+<!-- BUY ME A BEER AND HELP SUPPORT OPEN-SOURCE RESOURCES -->
+<div class="flex items-end justify-end fixed top-0 right-0 mt-4 mr-4 z-10">
+    <div>
+        <!-- <a title="Buy me a beer" href="https://www.buymeacoffee.com/scottwindon" target="_blank" class="block w-16 h-16 rounded-full transition-all shadow hover:shadow-lg transform hover:scale-110 hover:rotate-12"> -->
+            <!-- <img class="object-cover object-center w-full h-full rounded-full" src="https://i.pinimg.com/originals/60/fd/e8/60fde811b6be57094e0abc69d9c2622a.jpg"/> -->
+        <!-- </a> -->
+    </div>
+</div>
+
+<style>@import url('https://cdnjs.cloudflare.com/ajax/libs/MaterialDesign-Webfont/5.3.45/css/materialdesignicons.min.css');</style>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@2.5.0/dist/alpine.min.js"></script>
+<script>
+function chatBot() {
+    return {
+        botTyping: false,
+        chatHistory: JSON.parse(localStorage.getItem('askPromiseHistory') || '[]'),
+        currentSession: 0,
+        messages: [],
+        // Initialize messages for the current session
+        init() {
+            // Add showMenu property to each session for menu state
+            this.chatHistory.forEach(s => s.showMenu = false);
+            if (this.chatHistory.length === 0) {
+                this.newSession();
+            } else {
+                this.messages = this.chatHistory[this.currentSession].messages;
+            }
+        },
+        // Scroll chat to bottom
+        scrollChat: function() {
+            const messagesContainer = document.getElementById("messages");
+            messagesContainer.scrollTop = messagesContainer.scrollHeight - messagesContainer.clientHeight;
+            setTimeout(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight - messagesContainer.clientHeight;
+            }, 100);
+        },
+        // Start a new chat session
+        newSession() {
+            const newTitle = `Chat ${this.chatHistory.length + 1}`;
+            const newSession = {
+                title: newTitle,
+                created: Date.now(),
+                messages: [{ from: 'bot', text: 'Hello! How can I help you today?' }],
+                showMenu: false
+            };
+            this.chatHistory.push(newSession);
+            this.currentSession = this.chatHistory.length - 1;
+            this.messages = this.chatHistory[this.currentSession].messages;
+            this.saveHistory();
+            this.scrollChat();
+        },
+        // Switch to a different chat session
+        switchSession(idx) {
+            this.currentSession = idx;
+            this.messages = this.chatHistory[idx].messages;
+            // Close all menus
+            this.chatHistory.forEach(s => s.showMenu = false);
+            this.scrollChat();
+        },
+        // Rename a chat session
+        renameSession(idx) {
+            const newTitle = prompt('Enter a new name for this chat:', this.chatHistory[idx].title);
+            if (newTitle && newTitle.trim()) {
+                this.chatHistory[idx].title = newTitle.trim();
+                this.saveHistory();
+            }
+        },
+        // Delete a chat session
+        deleteSession(idx) {
+            if (confirm('Are you sure you want to delete this chat?')) {
+                this.chatHistory.splice(idx, 1);
+                if (this.currentSession >= this.chatHistory.length) {
+                    this.currentSession = Math.max(0, this.chatHistory.length - 1);
+                }
+                this.messages = this.chatHistory[this.currentSession]?.messages || [];
+                this.saveHistory();
+            }
+        },
+        // Save chat history to localStorage
+        saveHistory() {
+            // Only keep sessions from the last 6 hours (for demo purposes)
+            const now = Date.now();
+            this.chatHistory = this.chatHistory.filter(s => now - s.created < 6 * 60 * 60 * 1000);
+            localStorage.setItem('askPromiseHistory', JSON.stringify(this.chatHistory));
+        },
+        // Add a message to the current session
+        addMessage(msg) {
+            this.messages.push(msg);
+            this.chatHistory[this.currentSession].messages = this.messages;
+            // Update session title with a summary (first user message)
+            const firstUserMsg = this.messages.find(m => m.from === 'user');
+            if (firstUserMsg) {
+                this.chatHistory[this.currentSession].title = firstUserMsg.text.slice(0, 24) + (firstUserMsg.text.length > 24 ? '...' : '');
+            }
+            this.saveHistory();
+        },
+        // Send a message
+        async updateChat(target) {
+            const input = target.value.trim();
+            if (!input) return;
+            // Add user message immediately
+            this.addMessage({ from: 'user', text: input });
+            this.scrollChat();
+            target.value = '';
+            this.botTyping = true;
+            this.scrollChat();
+            try {
+                // POST to /chat 
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ query: input })
+                });
+                const data = await response.text();
+                this.addMessage({ from: 'bot', text: data });
+            } catch (e) {
+                this.addMessage({ from: 'bot', text: 'Sorry, there was an error.' });
+            }
+            this.botTyping = false;
+            this.scrollChat();
+        },
+        // Copy message text to clipboard
+        copyToClipboard(text) {
+            // Remove HTML tags if any
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = text;
+            const cleanText = tempDiv.innerText;
+            navigator.clipboard.writeText(cleanText).then(() => {
+                // Optionally, show a toast or feedback
+            });
+        }
+    }
+}
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"9566a1574bcb9d65","serverTiming":{"name":{"cfExtPri":true,"cfEdge":true,"cfOrigin":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}},"version":"2025.6.2","token":"1b7cbb72744b40c580f8633c6b62637e"}' crossorigin="anonymous"></script>
+</body>
+</html>

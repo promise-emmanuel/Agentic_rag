@@ -7,7 +7,15 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi[standard]>=0.115.12",
     "flask>=3.1.1",
+    "ipykernel>=6.29.5",
     "llama-index>=0.12.42",
+    "openai>=1.90.0",
+    "ragas>=0.2.15",
+    "rapidfuzz>=3.13.0",
     "ruff>=0.11.13",
+    "trulens>=1.5.2",
+    "trulens-apps-llamaindex>=1.5.2",
+    "trulens-eval>=1.5.2",
+    "trulens-providers-openai>=1.5.2",
     "uvicorn>=0.34.3",
 ]
