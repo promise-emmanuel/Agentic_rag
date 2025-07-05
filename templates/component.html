@@ -30,7 +30,7 @@
 
     <!-- <link rel="canonical" href="https://www.creative-tim.com/twcomponents/component/chatbot" itemprop="URL"> -->
     
-    <title>RAG Chatbot</title>
+    <title>AskPromise</title>
 
             <script src="https://cdn.tailwindcss.com"></script>
     </head>
@@ -40,11 +40,11 @@
         <!-- Header -->
         <header class="bg-[#d2b48c] text-black py-4 px-8 flex items-center shadow-md">
             <img src="../static/Image.jpg" alt="AskPromise Logo" class="w-10 h-10 rounded-full mr-3" />
-            <h1 class="text-2xl font-bold tracking-wide text-[#a67c52]">AskPromise</h1>
+            <h1><a href="/" class="text-2xl font-bold tracking-wide text-[#a67c52]">AskPromise</a></h1>
         </header>
         <div class="flex flex-1 overflow-hidden">
             <!-- Sidebar: Chat History -->
-            <aside class="w-64 bg-[#f7e7ce] border-r border-[#e2c9a0] flex flex-col p-4 overflow-y-auto hidden md:flex custom-scrollbar" style="max-height: 100vh; min-height: 0; scrollbar-width: thin; scrollbar-color: #a67c52 #f7e7ce;">
+            <aside class="w-64 bg-[#f7e7ce] border-r border-[#e2c9a0] flex flex-col p-4 overflow-y-auto hidden md:flex custom-scrollbar relative" style="max-height: 100vh; min-height: 0; scrollbar-width: thin; scrollbar-color: #a67c52 #f7e7ce;">
                 <h2 class="text-lg font-semibold mb-4 text-[#a67c52]">Chat History</h2>
                 <template x-for="(session, idx) in chatHistory" :key="idx">
                     <div class="mb-2 relative group">
@@ -64,26 +64,9 @@
                     </div>
                 </template>
                 <button class="mt-4 px-4 py-2 bg-[#a67c52] text-white rounded hover:bg-[#7c5a36] transition" @click="newSession()">+ New Chat</button>
+                <div class="flex-1"></div>
+                <a href="/" class="w-full mt-4 px-4 py-2 bg-[#f7e7ce] text-[#a67c52] border border-[#a67c52] rounded hover:bg-[#e2c9a0] hover:text-[#7c5a36] transition text-center font-semibold shadow-sm mb-2">Main Menu</a>
             </aside>
-<style>
-/* Custom scrollbar for chat area and sidebar */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #e2c9a0;
-  border-radius: 8px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #f7e7ce;
-  border-radius: 8px;
-}
-/* For Firefox */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #e2c9a0 #f7e7ce;
-}
-</style>
             <!-- Main Chat Area -->
             <main class="flex-1 flex flex-col h-full" style="background: #fff; color: #111;">
                 <div class="flex-1 flex flex-col overflow-y-auto p-6 custom-scrollbar" id="messages">
