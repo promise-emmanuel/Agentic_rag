@@ -36,40 +36,61 @@
     </head>
 
 <body class="bg-[#fdf6ee] min-h-screen text-black">
-    <div class="flex flex-col h-screen" x-data="chatBot()" x-init="init()" style="background: #fdf6ee; color: #111;">
+    <div class="flex flex-col h-screen" x-data="Object.assign(chatBot(), { showSidebar: false })" x-init="init()" style="background: #fdf6ee; color: #111;">
         <!-- Header -->
-        <header class="bg-[#d2b48c] text-black py-4 px-8 flex items-center shadow-md">
+        <header class="bg-[#d2b48c] text-black py-4 px-8 flex items-center shadow-md relative">
+            <!-- Hamburger Button for mobile/tablet, now inside header and left of logo -->
+            <button @click="showSidebar = true" class="md:hidden mr-3 bg-[#a67c52] text-white rounded-full p-2 shadow focus:outline-none transition hover:bg-[#7c5a36] flex items-center justify-center" :aria-expanded="showSidebar ? 'true' : 'false'" aria-label="Open chat history" style="height:2.5rem;width:2.5rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" /></svg>
+            </button>
             <img src="../static/Image.jpg" alt="AskPromise Logo" class="w-10 h-10 rounded-full mr-3" />
             <h1><a href="/" class="text-2xl font-bold tracking-wide text-[#a67c52]">AskPromise</a></h1>
         </header>
-        <div class="flex flex-1 overflow-hidden">
+        <div class="flex flex-1 overflow-hidden relative">
             <!-- Sidebar: Chat History -->
-            <aside class="w-64 bg-[#f7e7ce] border-r border-[#e2c9a0] flex flex-col p-4 overflow-y-auto hidden md:flex custom-scrollbar relative" style="max-height: 100vh; min-height: 0; scrollbar-width: thin; scrollbar-color: #a67c52 #f7e7ce;">
-                <h2 class="text-lg font-semibold mb-4 text-[#a67c52]">Chat History</h2>
-                <template x-for="(session, idx) in chatHistory" :key="idx">
-                    <div class="mb-2 relative group">
-                        <button class="w-full text-left px-3 py-2 rounded hover:bg-[#f3d9b2] focus:outline-none focus:bg-[#f3d9b2] text-black truncate"
-                            :class="currentSession === idx ? 'bg-[#e2c9a0] font-bold' : ''"
-                            @click="switchSession(idx)">
-                            <span x-text="session.title"></span>
-                        </button>
-                        <!-- More options button -->
-                        <button class="absolute right-2 top-2 opacity-60 group-hover:opacity-100 transition" @click.stop="session.showMenu = !session.showMenu">
-                            <span class="text-xl">&#8230;</span>
-                        </button>
-                        <div x-show="session.showMenu" @click.away="session.showMenu = false" class="absolute right-0 mt-2 w-32 bg-white border border-[#e2c9a0] rounded shadow-lg z-10">
-                            <button class="block w-full text-left px-4 py-2 text-sm hover:bg-[#f3d9b2] text-black" @click="renameSession(idx); session.showMenu = false">Rename</button>
-                            <button class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-[#f3d9b2]" @click="deleteSession(idx); session.showMenu = false">Delete</button>
+            <aside :class="['fixed md:static top-0 left-0 h-full z-20 transition-transform duration-300', showSidebar ? 'translate-x-0' : '-translate-x-full', 'md:translate-x-0 md:flex']"
+                :style="(window.innerWidth < 1024) ? 'width: 70vw; min-width: 240px; max-width: 95vw;' : 'width: 16rem; min-width: 16rem; max-width: 20rem;'"
+                class="bg-[#f7e7ce] border-r border-[#e2c9a0] flex-col px-0 py-0 overflow-y-auto custom-scrollbar relative shadow-2xl md:shadow-none"
+                style="max-height: 100vh; min-height: 0; scrollbar-width: thin; scrollbar-color: #a67c52 #f7e7ce;"
+                @keydown.escape.window="showSidebar = false" @click.away="showSidebar = false"
+                x-show="showSidebar || window.innerWidth >= 768"
+                x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full opacity-0" x-transition:enter-end="translate-x-0 opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0 opacity-100" x-transition:leave-end="-translate-x-full opacity-0">
+                <div class="bg-[#e2c9a0] px-6 py-4 flex items-center justify-between border-b border-[#d2b48c] sticky top-0 z-10 shadow-sm">
+                    <h2 class="text-lg font-bold text-[#7c5a36] tracking-wide">Chat History</h2>
+                    <!-- Close button for mobile -->
+                    <button @click="showSidebar = false" class="md:hidden text-[#a67c52] hover:text-[#7c5a36] focus:outline-none p-1 rounded-full transition" aria-label="Close chat history">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div class="flex-1 flex flex-col px-4 py-2 space-y-2 overflow-y-auto" style="min-height:0;">
+                    <template x-for="(session, idx) in chatHistory" :key="idx">
+                        <div class="group relative rounded-lg overflow-visible hover:bg-[#f3d9b2] transition flex items-center">
+                            <button class="flex-1 text-left px-3 py-2 rounded-l-lg focus:outline-none text-black truncate bg-transparent group-hover:bg-[#f3d9b2] transition"
+                                :class="currentSession === idx ? 'bg-[#e2c9a0] font-bold' : ''"
+                                @click="switchSession(idx); if(window.innerWidth < 768) showSidebar = false;">
+                                <span x-text="session.title"></span>
+                            </button>
+                            <!-- More options button -->
+                            <button class="ml-1 text-[#a67c52] opacity-60 group-hover:opacity-100 transition p-1 rounded-full hover:bg-[#e2c9a0] focus:outline-none" @click.stop="session.showMenu = !session.showMenu">
+                                <span class="text-xl">&#8230;</span>
+                            </button>
+                            <div x-show="session.showMenu" @click.away="session.showMenu = false" class="absolute right-0 mt-10 w-32 bg-white border border-[#e2c9a0] rounded shadow-lg z-10">
+                                <button class="block w-full text-left px-4 py-2 text-sm hover:bg-[#f3d9b2] text-black" @click="renameSession(idx); session.showMenu = false">Rename</button>
+                                <button class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-[#f3d9b2]" @click="deleteSession(idx); session.showMenu = false">Delete</button>
+                            </div>
                         </div>
-                    </div>
-                </template>
-                <button class="mt-4 px-4 py-2 bg-[#a67c52] text-white rounded hover:bg-[#7c5a36] transition" @click="newSession()">+ New Chat</button>
-                <div class="flex-1"></div>
-                <a href="/" class="w-full mt-4 px-4 py-2 bg-[#f7e7ce] text-[#a67c52] border border-[#a67c52] rounded hover:bg-[#e2c9a0] hover:text-[#7c5a36] transition text-center font-semibold shadow-sm mb-2">Main Menu</a>
+                    </template>
+                </div>
+                <div class="px-2 pb-3 pt-2 border-t border-[#e2c9a0] bg-[#f7e7ce] flex flex-col gap-2 sticky bottom-0 z-10">
+                    <button class="min-h-[44px] px-2 py-2 bg-[#a67c52] text-white rounded-lg hover:bg-[#7c5a36] transition w-full font-semibold shadow text-base whitespace-nowrap overflow-hidden text-ellipsis" @click="newSession()">+ New Chat</button>
+                    <a href="/" class="min-h-[44px] w-full px-2 py-2 bg-[#f7e7ce] text-[#a67c52] border border-[#a67c52] rounded-lg hover:bg-[#e2c9a0] hover:text-[#7c5a36] transition text-center font-semibold shadow-sm text-base whitespace-nowrap overflow-hidden text-ellipsis">Main Menu</a>
+                </div>
             </aside>
+            <!-- Overlay for mobile when sidebar is open -->
+            <div x-show="showSidebar && window.innerWidth < 768" class="fixed inset-0 bg-black bg-opacity-30 z-10 md:hidden" @click="showSidebar = false" x-transition:enter="transition-opacity ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"></div>
             <!-- Main Chat Area -->
             <main class="flex-1 flex flex-col h-full" style="background: #fff; color: #111;">
-                <div class="flex-1 flex flex-col overflow-y-auto p-6 custom-scrollbar" id="messages">
+                <div class="flex-1 flex flex-col overflow-y-auto p-6 custom-scrollbar scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-gray-200" id="messages" style="scrollbar-width: thin; scrollbar-color: #222 #e5e7eb;">
                     <template x-for="(message, key) in messages" :key="key">
                         <div class="mb-4 flex" :class="message.from=='bot'?'':'justify-end'">
                             <div class="flex flex-col items-start w-full max-w-xl" :class="message.from=='user' ? 'items-end ml-auto' : ''">
@@ -83,7 +104,9 @@
                                         <!-- Optionally, add a user avatar here. Example: -->
                                         <!-- <img src="/static/dummy-user.png" alt="User Avatar" class="w-8 h-8 rounded-full ml-3 order-2" /> -->
                                     </template>
-                                    <div class="max-w-xl px-5 py-3 rounded-2xl shadow text-md" :class="message.from=='bot'?'bg-[#f7e7ce] text-black rounded-bl-none':'bg-[#a67c52] text-white rounded-br-none'" x-html="message.text"></div>
+                                    <div class="max-w-xl px-5 py-3 rounded-2xl shadow text-md"
+                                         :class="message.from=='bot'?'bg-[#f7e7ce] text-black rounded-bl-none':'bg-[#a67c52] text-white rounded-br-none'"
+                                         x-html="message.from=='bot' ? DOMPurify.sanitize(marked.parse(message.text)) : message.text"></div>
                                 </div>
                                 <template x-if="message.from=='bot'">
                                     <button class="flex items-center mt-1 ml-11 text-xs text-[#a67c52] hover:text-[#7c5a36] focus:outline-none" @click="copyToClipboard(message.text)">
@@ -118,8 +141,30 @@
     </div>
 </div>
 
-<style>@import url('https://cdnjs.cloudflare.com/ajax/libs/MaterialDesign-Webfont/5.3.45/css/materialdesignicons.min.css');</style>
+<style>
+@import url('https://cdnjs.cloudflare.com/ajax/libs/MaterialDesign-Webfont/5.3.45/css/materialdesignicons.min.css');
+/* Custom scrollbar for all browsers */
+#messages::-webkit-scrollbar {
+  width: 8px;
+}
+#messages::-webkit-scrollbar-thumb {
+  background: #222;
+  border-radius: 6px;
+}
+#messages::-webkit-scrollbar-track {
+  background: #e5e7eb;
+  border-radius: 6px;
+}
+#messages {
+  scrollbar-width: thin;
+  scrollbar-color: #222 #e5e7eb;
+}
+</style>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@2.5.0/dist/alpine.min.js"></script>
+<!-- Marked.js for Markdown parsing -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- DOMPurify for sanitizing HTML -->
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
 <script>
 function chatBot() {
     return {
