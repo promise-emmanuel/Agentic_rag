@@ -43,8 +43,8 @@ def chat():
         return str(response)
     return render_template('component.html')
 
-if __name__ =="__main__":
-    port = int(os.environ.get('port', 3000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+# if __name__ =="__main__":
+    # port = int(os.environ.get('port', 3000))
+    # app.run(host='0.0.0.0', port=port, debug=True)
 
 
