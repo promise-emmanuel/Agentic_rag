@@ -5,25 +5,26 @@ import asyncio
 import os, uvicorn
 from dotenv import load_dotenv, find_dotenv
 from typing import Union
-
-
 from flask import Flask, request, jsonify, render_template
-# from fastapi import FastAPI, HTTPException
 
 # Load environment variables
 _ = load_dotenv(find_dotenv())
 
+
 # app = FastAPI()
 app = Flask(__name__)
 
+# Lazy loading
+query_engine = None
 
-# Create a RAG tool using LlamaIndex
-documents = SimpleDirectoryReader("./data").load_data()
-index = VectorStoreIndex.from_documents(documents)
-query_engine = index.as_query_engine()
-
-
-
+def initialize_query_engine():
+    global query_engine
+    if query_engine is None:
+        print("Loading documents and creating index...")
+        # Create a RAG tool using LlamaIndex
+        documents = SimpleDirectoryReader("./data").load_data()
+        index = VectorStoreIndex.from_documents(documents)
+        query_engine = index.as_query_engine()
 
 
 # Landing page route (GET only)
@@ -31,10 +32,13 @@ query_engine = index.as_query_engine()
 def landing():
     return render_template('index.html')
 
+
 # Chat page route (GET for chat UI, POST for chat API)
 @app.route("/chat", methods=["POST", "GET"])
 def chat():
     if request.method == "POST":
+        # Ensure query engine is initialized
+        initialize_query_engine()
         # Accept both form and JSON for flexibility
         query = request.form.get("query") 
         if not query:
