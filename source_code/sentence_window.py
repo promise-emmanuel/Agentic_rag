@@ -31,7 +31,7 @@ def get_secret_and_export():
         os.environ[key] = value
 
 # Invoke it once at import time
-# get_secret_and_export()
+get_secret_and_export()
 
 
 
@@ -60,7 +60,7 @@ from llama_index.vector_stores.pinecone import PineconeVectorStore
 
 
 # uncomment to run locally
-_ = load_dotenv(find_dotenv())
+# _ = load_dotenv(find_dotenv())
 
 
 client = OpenAIClient()
@@ -131,6 +131,7 @@ def build_index(docs):
     
     return sentence_window_index
     
+    # uncomment to use the local stored vector
     # if not os.path.exists(Storage_dir):
     #     os.makedirs(Storage_dir)
     
@@ -158,7 +159,7 @@ def load_index():
         index_name = "askpromise"
         if index_name not in available_indexes:
             print()
-            print("I can't connect to pinecone")
+            print("Check Pinecone")
             
         # Connect to existing index
         pinecone_index = pc.Index(index_name)
@@ -200,7 +201,7 @@ def generate_response(retrieved_context, query):
     refined_context = []
 
     # First, filter the retrieved context using similaritypostprocessor
-    processor = SimilarityPostprocessor(similarity_cutoff=0.40)
+    processor = SimilarityPostprocessor(similarity_cutoff=0.30)
     filtered_context = processor.postprocess_nodes(retrieved_context)
      
     #next we want to make sure the contexts are not empty, then also retrieve the metadata and store it in a list

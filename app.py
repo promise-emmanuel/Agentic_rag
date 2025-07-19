@@ -63,7 +63,7 @@ query_engine = None
 Data =["./data/handbook.md", "./data/Pmg_lds.md"] 
 STORAGE_DIR = "./sentence_window_storage"
 
-# uncomment when running locally
+# uncomment when running locally and want to use the locally stored vector instead of pinecone index
 # def initialize_query_engine():
 #     global query_engine  
 #     if query_engine is None:
@@ -96,8 +96,8 @@ def initialize_query_engine():
         except Exception as e:                 
             # load document and build index
             print(f"Could not load index: {e}")
-            # document = load_document(Data)
-            # index = build_index(document)
+            document = load_document(Data)
+            index = build_index(document)
             # create and cache engine    
         query_engine = create_engine(index)
         print("Query engine initialized.") 
@@ -130,9 +130,9 @@ def chat():
     return render_template('component.html')
 
 # uncomment to run locally
-if __name__ =="__main__":
-    port = int(os.environ.get('port', 3000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+# if __name__ =="__main__":
+    # port = int(os.environ.get('port', 3000))
+    # app.run(host='0.0.0.0', port=port, debug=True)
 
 
 
