@@ -1,4 +1,4 @@
-import os, json
+import os, json, shutil
 import boto3
 from botocore.exceptions import ClientError
 
@@ -56,6 +56,8 @@ from source_code.sentence_window import (
 # Uncomment the next line if you have a .env file with your OpenAI API key
 _ = load_dotenv(find_dotenv())
 
+   
+
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -73,14 +75,9 @@ def initialize_query_engine():
         print("Loading documents and creating index...")
         # Create a RAG tool using LlamaIndex
         if os.path.exists(STORAGE_DIR):
-            #remove the storage directory... Reason: Loading index doesn't work properly
+            #remove the storage directory... Reason: Loading the index doesn't work properly
             # This is a workaround to ensure the index is rebuilt correctly
-            print("Removing existing storage directory...")
-            for root, dirs, files in os.walk(STORAGE_DIR, topdown=False):
-                for name in files:
-                    os.remove(os.path.join(root, name))
-                for name in dirs:
-                    os.rmdir(os.path.join(root, name))  
+            shutil.rmtree(STORAGE_DIR)
                          
         # load document and build index
         document = load_document(Data)
