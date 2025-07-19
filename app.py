@@ -63,23 +63,45 @@ query_engine = None
 Data =["./data/handbook.md", "./data/Pmg_lds.md"] 
 STORAGE_DIR = "./sentence_window_storage"
 
+# uncomment when running locally
+# def initialize_query_engine():
+#     global query_engine  
+#     if query_engine is None:
+#         print("Loading documents and creating index...")
+#         # Create a RAG tool using LlamaIndex
+#         if os.path.exists(STORAGE_DIR):
+#             #remove the storage directory... Reason: Loading the index doesn't work properly
+#             # This is a workaround to ensure the index is rebuilt correctly
+#             shutil.rmtree(STORAGE_DIR)
+                         
+#         # load document and build index
+#         document = load_document(Data)
+#         index = build_index(document, STORAGE_DIR)
+#         # create and cache engine    
+#         query_engine = create_engine(index)
+#         print("Query engine initialized.") 
+
 def initialize_query_engine():
     global query_engine  
     if query_engine is None:
         print("Loading documents and creating index...")
-        # Create a RAG tool using LlamaIndex
-        if os.path.exists(STORAGE_DIR):
-            #remove the storage directory... Reason: Loading the index doesn't work properly
-            # This is a workaround to ensure the index is rebuilt correctly
-            shutil.rmtree(STORAGE_DIR)
-                         
-        # load document and build index
-        document = load_document(Data)
-        index = build_index(document, STORAGE_DIR)
-        # create and cache engine    
+        
+        # build or load index with pine cone and use as query engine
+        try:
+            # load index
+            # document = load_document(Data)
+            index = load_index()
+            print("Loaded existing Pinecone Index")
+    
+        except Exception as e:                 
+            # load document and build index
+            print(f"Could not load index: {e}")
+            # document = load_document(Data)
+            # index = build_index(document)
+            # create and cache engine    
         query_engine = create_engine(index)
         print("Query engine initialized.") 
-
+   
     
 # Landing page route (GET only)
 @app.route("/", methods=["GET"])
@@ -108,9 +130,9 @@ def chat():
     return render_template('component.html')
 
 # uncomment to run locally
-# if __name__ =="__main__":
-    # port = int(os.environ.get('port', 3000))
-    # app.run(host='0.0.0.0', port=port, debug=True)
+if __name__ =="__main__":
+    port = int(os.environ.get('port', 3000))
+    app.run(host='0.0.0.0', port=port, debug=True)
 
 
 

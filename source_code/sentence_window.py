@@ -31,7 +31,7 @@ def get_secret_and_export():
         os.environ[key] = value
 
 # Invoke it once at import time
-get_secret_and_export()
+# get_secret_and_export()
 
 
 
@@ -54,18 +54,27 @@ from llama_index.postprocessor.cohere_rerank import CohereRerank
 from llama_index.core.postprocessor import SimilarityPostprocessor
 from source_code.prompt import Prompt
 
+from pinecone import Pinecone, ServerlessSpec
+# import pinecone
+from llama_index.vector_stores.pinecone import PineconeVectorStore
+
 
 # uncomment to run locally
-# _ = load_dotenv(find_dotenv())
+_ = load_dotenv(find_dotenv())
 
 
 client = OpenAIClient()
 
 MODEL = os.environ["MODEL"]
 EMBED_MODEL = os.environ["EMBED_MODEL"]
+PINECONE_API_KEY = os.environ["PINECONE_API_KEY"]
+
+pc = Pinecone(api_key=PINECONE_API_KEY)
+
+
 
 node_parser = SentenceWindowNodeParser.from_defaults(
-        window_size=5,  # number of sentences in each node
+        window_size=3,  # number of sentences in each node
         window_metadata_key="window",
         original_text_metadata_key="original_text",
     )
@@ -94,39 +103,85 @@ def load_document(Data):
     
     return document
 
-def build_index(docs, Storage_dir):
+def build_index(docs):
     """Build a vector store index from the provided documents.""" 
 
     Settings.llm = LlamaOpenAI(model=MODEL)
     Settings.embed_model = OpenAIEmbedding(model=EMBED_MODEL)
     Settings.node_parser = node_parser
-
     nodes = node_parser.get_nodes_from_documents([docs])
-    
-    if not os.path.exists(Storage_dir):
-        os.makedirs(Storage_dir)
-    
-        #create a fresh storage context
-        storage_context = StorageContext.from_defaults()
-    
-        # build the index from nodes
-        sentence_window_index = VectorStoreIndex(
-            nodes, storage_context=storage_context)
 
-        # persist both the vector store and docstore so u
-        sentence_window_index.storage_context.persist(persist_dir=Storage_dir)
+    index_name = "askpromise"
+    if index_name not in pc.list_indexes():
+        print("building index")
+        pc.create_index(
+        name=index_name,
+        dimension=1536,   #openai ada-002 embedding size
+        metric="euclidean",
+        spec=ServerlessSpec(cloud="aws", region="us-east-1"),
+        )
+    
+    print("loading index")
+    pinecone_index = pc.Index(index_name)
+        
+    vector_store = PineconeVectorStore(pinecone_index=pinecone_index)
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+    
+    sentence_window_index = VectorStoreIndex(nodes, storage_context=storage_context)
     
     return sentence_window_index
     
+    # if not os.path.exists(Storage_dir):
+    #     os.makedirs(Storage_dir)
     
-def load_index(Storage_dir):
-    """Load the index from the storage context."""    
+    #     #create a fresh storage context
+    #     storage_context = StorageContext.from_defaults()
+    
+    #     # build the index from nodes
+    #     sentence_window_index = VectorStoreIndex(
+    #         nodes, storage_context=storage_context)
 
-    # load everything back in one call
-    sentence_window_index = load_index_from_storage(
-        StorageContext.from_defaults(persist_dir=Storage_dir))
+    #     # persist both the vector store and docstore so u
+    #     sentence_window_index.storage_context.persist(persist_dir=Storage_dir)
     
-    return sentence_window_index
+    # return sentence_window_index
+    
+    
+def load_index():
+    """Load the index from the storage context."""     
+    
+    try:
+        # List available indexes and verify our index exists
+        available_indexes = pc.list_indexes()
+        print("Available indexes:", available_indexes)
+        
+        index_name = "askpromise"
+        if index_name not in available_indexes:
+            print()
+            print("I can't connect to pinecone")
+            
+        # Connect to existing index
+        pinecone_index = pc.Index(index_name)
+
+        # Initialize vector store with Pinecone
+        vector_store = PineconeVectorStore(pinecone_index=pinecone_index)
+        
+        # Create storage context with the vector store
+        # storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
+        # Load the index from vector store
+        sentence_window_index = VectorStoreIndex.from_vector_store(
+            vector_store=vector_store,
+            # storage_context=storage_context
+        )
+        
+        # print(f"Successfully loaded index '{index_name}' from Pinecone")
+        # return pinecone_index
+        return sentence_window_index
+
+    except Exception as e:
+        print(f"Error loading Pinecone index: {str(e)}")
+        raise
 
 def create_engine(index):
     """Create a query engine from the provided index."""
@@ -145,7 +200,7 @@ def generate_response(retrieved_context, query):
     refined_context = []
 
     # First, filter the retrieved context using similaritypostprocessor
-    processor = SimilarityPostprocessor(similarity_cutoff=0.50)
+    processor = SimilarityPostprocessor(similarity_cutoff=0.40)
     filtered_context = processor.postprocess_nodes(retrieved_context)
      
     #next we want to make sure the contexts are not empty, then also retrieve the metadata and store it in a list
@@ -160,11 +215,11 @@ def generate_response(retrieved_context, query):
     context_length = len(refined_context)
     print("Context Length:", context_length)
     print("Contexts found:", bool(filtered_context))  # Print whether contexts were found
-
+    print(refined_context[0])
     
     
     # Create a prompt object
-    prompt = Prompt(Context=refined_context, Query=query, Context_Length=context_length)
+    prompt = Prompt(Context=refined_context, Query=query)
     
     # Get the response message
     message = prompt.get_prompts()
