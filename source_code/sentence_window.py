@@ -1,0 +1,134 @@
+import os
+from dotenv import load_dotenv,  find_dotenv
+from openai import OpenAI as OpenAIClient
+from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, Document, StorageContext, load_index_from_storage
+
+from llama_index.core.node_parser import SentenceWindowNodeParser
+
+from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.llms.openai import OpenAI as LlamaOpenAI
+from llama_index.core import Settings
+
+# adding postprocessor and reranking to build query engine
+from llama_index.core.indices.postprocessor import MetadataReplacementPostProcessor
+from llama_index.postprocessor.cohere_rerank import CohereRerank
+
+from llama_index.core.postprocessor import SimilarityPostprocessor
+from source_code.prompt import Prompt
+
+_ = load_dotenv(find_dotenv())
+
+
+client = OpenAIClient()
+
+MODEL = os.environ["MODEL"]
+EMBED_MODEL = os.environ["EMBED_MODEL"]
+
+node_parser = SentenceWindowNodeParser.from_defaults(
+        window_size=5,  # number of sentences in each node
+        window_metadata_key="window",
+        original_text_metadata_key="original_text",
+    )
+    
+
+# metadata replacement replaces the retrieved chunks.text with the metadata (sentence window).
+postprocess = MetadataReplacementPostProcessor(
+    target_metadata_key="window"
+)
+
+
+cohere_rerank = CohereRerank(
+    api_key=os.environ["COHERE_API_KEY"], 
+    top_n=4,
+)
+
+
+
+
+def load_document(Data):
+    """Load a document from the specified file path."""
+    documents = SimpleDirectoryReader(input_files=Data).load_data()
+    
+    # merge into a single large document rather than one document per page
+    document = Document(text="\n\n".join([doc.text for doc in documents]))
+    
+    return document
+
+def build_index(docs, Storage_dir):
+    """Build a vector store index from the provided documents.""" 
+
+    Settings.llm = LlamaOpenAI(model=MODEL)
+    Settings.embed_model = OpenAIEmbedding(model=EMBED_MODEL)
+    Settings.node_parser = node_parser
+
+    nodes = node_parser.get_nodes_from_documents([docs])
+    
+    if not os.path.exists(Storage_dir):
+        os.makedirs(Storage_dir)
+    
+        #create a fresh storage context
+        storage_context = StorageContext.from_defaults()
+    
+        # build the index from nodes
+        sentence_window_index = VectorStoreIndex(
+            nodes, storage_context=storage_context)
+
+        # persist both the vector store and docstore so u
+        sentence_window_index.storage_context.persist(persist_dir=Storage_dir)
+    
+    return sentence_window_index
+    
+    
+def load_index(Storage_dir):
+    """Load the index from the storage context."""    
+
+    # load everything back in one call
+    sentence_window_index = load_index_from_storage(
+        StorageContext.from_defaults(persist_dir=Storage_dir))
+    
+    return sentence_window_index
+
+def create_engine(index):
+    """Create a query engine from the provided index."""
+    
+    sentence_window_query_engine = index.as_retriever(
+        similarity_top_k=12,  # number of top results to return
+        node_postprocessors=[postprocess, cohere_rerank],  # apply postprocessing and reranking
+    )
+    
+    return sentence_window_query_engine
+
+# function to get a response based on the retrieved context and query
+def generate_response(retrieved_context, query):
+    """Generate a response based on the retrieved context and query."""
+    
+    refined_context = []
+
+    # First, filter the retrieved context using similaritypostprocessor
+    processor = SimilarityPostprocessor(similarity_cutoff=0.50)
+    filtered_context = processor.postprocess_nodes(retrieved_context)
+     
+    #next we want to make sure the contexts are not empty, then also retrieve the metadata and store it in a list
+
+    if not filtered_context:
+        print("No contexts found")
+    else:
+        # If not empty, process each context
+        for context in filtered_context:
+            refined_context.append(context.metadata["window"])
+        
+    context_length = len(refined_context)
+    print("Context Length:", context_length)
+    print("Contexts found:", bool(filtered_context))  # Print whether contexts were found
+
+    
+    
+    # Create a prompt object
+    prompt = Prompt(Context=refined_context, Query=query, Context_Length=context_length)
+    
+    # Get the response message
+    message = prompt.get_prompts()
+    
+    # Use OpenAI to get the AI response
+    completion = client.chat.completions.create(model=MODEL, messages=message)
+    return completion.choices[0].message.content
