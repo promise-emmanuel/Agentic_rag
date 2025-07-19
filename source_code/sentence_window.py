@@ -1,3 +1,41 @@
+import os, json, shutil
+import boto3
+from botocore.exceptions import ClientError
+
+# Ensure the environment variables are set from AWS Secrets Manager
+# This function fetches the secret and exports it as environment variables
+# It should be called once at the start of the application
+# This is useful for serverless environments like AWS Lambda or when running in a container
+def get_secret_and_export():
+    secret_name = "Askpromise/OpenAIKey"
+    region_name = "eu-north-1"
+
+    # Create a Secrets Manager client
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        resp = client.get_secret_value(SecretId=secret_name)
+    except ClientError as e:
+        # Log or handle the error as needed
+        raise
+
+    # Parse the JSON string into a dict
+    secret_dict = json.loads(resp['SecretString'])
+
+    # Export each key as an environment variable
+    for key, value in secret_dict.items():
+        os.environ[key] = value
+
+# Invoke it once at import time
+get_secret_and_export()
+
+
+
+# app 
 import os
 from dotenv import load_dotenv,  find_dotenv
 from openai import OpenAI as OpenAIClient
@@ -16,7 +54,9 @@ from llama_index.postprocessor.cohere_rerank import CohereRerank
 from llama_index.core.postprocessor import SimilarityPostprocessor
 from source_code.prompt import Prompt
 
-_ = load_dotenv(find_dotenv())
+
+# uncomment to run locally
+# _ = load_dotenv(find_dotenv())
 
 
 client = OpenAIClient()
