@@ -12,3 +12,6 @@ wheels/
 
 # ./notebooks/.ipynb_checkpoints
 # *.ipynb_checkpoints
+
+# LlamaIndex storage
+sentence_window_storage/
